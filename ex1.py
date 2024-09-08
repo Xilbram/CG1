@@ -114,6 +114,7 @@ class CGApp:
 
 
 
+
     def draw(self):
         self.draw_objects()
 
