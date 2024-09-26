@@ -3,6 +3,8 @@ from GraphicObject import GraphicObject
 from Transformador import *
 from tkinter import Toplevel, Entry
 
+from ex1.objParser import write_obj, read_obj
+
 
 # Classe da Aplicação Tkinter
 class CGApp:
@@ -11,7 +13,7 @@ class CGApp:
         self.indexObj = 0
         self.root.title("CG 2D")
         self.canvas = tk.Canvas(root, bg="white", width=800, height=600)
-        self.canvas.grid(row=0, column=0, rowspan=8, padx=10, pady=10)
+        self.canvas.grid(row=0, column=0, rowspan=10, padx=10, pady=10)
 
         self.window = {'xmin': -10, 'xmax': 10, 'ymin': -10, 'ymax': 10}
         self.viewport = {'xmin': 0, 'xmax': 800, 'ymin': 0, 'ymax': 400}
@@ -36,57 +38,31 @@ class CGApp:
         self.zoom_out_button = tk.Button(root, text="Zoom Out", command=lambda: self.zoom(1.1))
         self.zoom_out_button.grid(row=5, column=1, padx=10, pady=5, sticky="ew")
 
-        # Quadro para adicionar objetos
-        ponto_frame = tk.LabelFrame(root, text="Adicionar Objetos")
-        ponto_frame.grid(row=6, column=0, padx=10, pady=10, sticky="nsew")
+        #Adiciona objetos
+        self.adicionar_objeto_button = tk.Button(root, text="Adicionar Objeto", command=self.adicionar_objeto)
+        self.adicionar_objeto_button.grid(row=6, column=1, padx=10, pady=5, sticky="ew")
 
         # Espaço de seleção de objetos
         self.listBoxObjetos = tk.Listbox(root)
         self.listBoxObjetos.grid(row=0, column=2, rowspan=8, padx=10, pady=10, sticky="ns")
 
+        #Edicao objetos
         self.editar_button = tk.Button(root, text="Editar Objeto", command=self.editar_objeto)
-        self.editar_button.grid(row=6, column=1, padx=10, pady=5, sticky="ew")
+        self.editar_button.grid(row=7, column=1, padx=10, pady=5, sticky="ew")
 
-        # Adicionar ponto
-        labelX = tk.Label(ponto_frame, text="Coordenada X do ponto")
-        labelX.grid(row=0, column=0, padx=5, pady=5)
-        labelY = tk.Label(ponto_frame, text="Coordenada Y do ponto")
-        labelY.grid(row=0, column=1, padx=5, pady=5)
-        self.pontoX = Entry(ponto_frame)
-        self.pontoY = Entry(ponto_frame)
-        self.pontoX.grid(row=1, column=0, padx=5, pady=5)
-        self.pontoY.grid(row=1, column=1, padx=5, pady=5)
-        botaoAddPonto = tk.Button(ponto_frame, text="Add Ponto", command=self.addPonto)
-        botaoAddPonto.grid(row=1, column=2, padx=5, pady=5)
+        #Rotaciona window
+        self.label_rotacao_window = tk.Label(self.root, text="Angulo para rotacionar a window")
+        self.label_rotacao_window.grid(row=9, column=1, padx=10, pady=5, sticky="ew")
+        self.angulo_rotacionar_window = Entry(self.root)
+        self.angulo_rotacionar_window.grid(row=9, column=2, padx=10, pady=5, sticky="ew")
+        self.rotate_window_left = tk.Button(root, text="Rotacionar esquerda",
+                                            command=lambda: self.rotate_window(self.angulo_rotacionar_window.get(), "L"))
+        self.rotate_window_right = tk.Button(root, text="Rotacionar direita",
+                                             command=lambda: self.rotate_window(self.angulo_rotacionar_window.get(), "R"))
+        self.rotate_window_left.grid(row=10, column=1, padx=10, pady=5, sticky="ew")
+        self.rotate_window_right.grid(row=10, column=2, padx=10, pady=5, sticky="ew")
 
-        # Adicionar linha
-        labelXLinha = tk.Label(ponto_frame, text="X inicial da linha")
-        labelXLinha.grid(row=2, column=0, padx=5, pady=5)
-        labelYLinha = tk.Label(ponto_frame, text="Y inicial da linha")
-        labelYLinha.grid(row=2, column=1, padx=5, pady=5)
-        labelXLinhaFinal = tk.Label(ponto_frame, text="X final da linha")
-        labelXLinhaFinal.grid(row=2, column=2, padx=5, pady=5)
-        labelYLinhaFinal = tk.Label(ponto_frame, text="Y final da linha")
-        labelYLinhaFinal.grid(row=2, column=3, padx=5, pady=5)
-
-        self.linhaX1 = Entry(ponto_frame)
-        self.linhaY1 = Entry(ponto_frame)
-        self.linhaX1.grid(row=3, column=0, padx=5, pady=5)
-        self.linhaY1.grid(row=3, column=1, padx=5, pady=5)
-        self.linhaX2 = Entry(ponto_frame)
-        self.linhaY2 = Entry(ponto_frame)
-        self.linhaX2.grid(row=3, column=2, padx=5, pady=5)
-        self.linhaY2.grid(row=3, column=3, padx=5, pady=5)
-        botaoAddLinha = tk.Button(ponto_frame, text="Add Linha", command=self.addLinha)
-        botaoAddLinha.grid(row=3, column=4, padx=5, pady=5)
-
-        # Adicionar polígono (wireframe)
-        labelPoligono = tk.Label(ponto_frame, text="Wireframe (ex.: ((1,1,2,2),(2,2,2,2))")
-        labelPoligono.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
-        self.entryPoligno = Entry(ponto_frame)
-        self.entryPoligno.grid(row=5, column=0, columnspan=3, padx=5, pady=5)
-        botaoAddPoligono = tk.Button(ponto_frame, text="Add Wireframe", command=self.addWireframe)
-        botaoAddPoligono.grid(row=5, column=4, padx=5, pady=5)
+        self.draw_axes()
 
 
 
@@ -94,6 +70,53 @@ class CGApp:
         self.listBoxObjetos.delete(0,tk.END)
         for item in self.display_file:
             self.listBoxObjetos.insert(tk.END,item.obj_type)
+
+    def adicionar_objeto(self):
+        nova_janela = Toplevel(self.root)
+        nova_janela.title(f"Adicionar objeto")
+        nova_janela.geometry("700x200")
+
+        #Ponto
+        labelX = tk.Label(nova_janela, text="Coordenada X do ponto")
+        labelX.grid(row=0, column=0, padx=5, pady=5)
+        labelY = tk.Label(nova_janela, text="Coordenada Y do ponto")
+        labelY.grid(row=0, column=1, padx=5, pady=5)
+        pontoX = Entry(nova_janela)
+        pontoY = Entry(nova_janela)
+        pontoX.grid(row=1, column=0, padx=5, pady=5)
+        pontoY.grid(row=1, column=1, padx=5, pady=5)
+        botaoAddPonto = tk.Button(nova_janela, text="Add Ponto", command=lambda: self.addPonto(pontoX.get(),pontoY.get()))
+        botaoAddPonto.grid(row=1, column=2, padx=5, pady=5)
+
+        #Linha
+        labelXLinha = tk.Label(nova_janela, text="X inicial da linha")
+        labelXLinha.grid(row=2, column=0, padx=5, pady=5)
+        labelYLinha = tk.Label(nova_janela, text="Y inicial da linha")
+        labelYLinha.grid(row=2, column=1, padx=5, pady=5)
+        labelXLinhaFinal = tk.Label(nova_janela, text="X final da linha")
+        labelXLinhaFinal.grid(row=2, column=2, padx=5, pady=5)
+        labelYLinhaFinal = tk.Label(nova_janela, text="Y final da linha")
+        labelYLinhaFinal.grid(row=2, column=3, padx=5, pady=5)
+        linhaX1 = Entry(nova_janela)
+        linhaY1 = Entry(nova_janela)
+        linhaX1.grid(row=3, column=0, padx=5, pady=5)
+        linhaY1.grid(row=3, column=1, padx=5, pady=5)
+        linhaX2 = Entry(nova_janela)
+        linhaY2 = Entry(nova_janela)
+        linhaX2.grid(row=3, column=2, padx=5, pady=5)
+        linhaY2.grid(row=3, column=3, padx=5, pady=5)
+        botaoAddLinha = tk.Button(nova_janela, text="Add Linha", command=lambda: self.addLinha(linhaX1.get(),linhaY1.get()
+                                                                                               ,linhaX2.get(),linhaY2.get()))
+        botaoAddLinha.grid(row=3, column=4, padx=5, pady=5)
+
+        #Wireframe
+        labelPoligono = tk.Label(nova_janela, text="Wireframe (ex.: ((1,1,2,2),(2,2,2,2))")
+        labelPoligono.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+        entryPoligno = Entry(nova_janela)
+        entryPoligno.grid(row=5, column=0, columnspan=3, padx=5, pady=5)
+        botaoAddPoligono = tk.Button(nova_janela, text="Add Wireframe", command=lambda: self.addWireframe(entryPoligno.get()))
+        botaoAddPoligono.grid(row=5, column=4, padx=5, pady=5)
+
 
     def editar_objeto(self):
         selected_index = self.listBoxObjetos.curselection()
@@ -200,39 +223,40 @@ class CGApp:
         self.indexObj += 1
         return self.indexObj
 
-    def addPonto(self):
-        x = int(self.pontoX.get())
-        y = int(self.pontoY.get())
+    def addPonto(self, x,y):
+        x = float(x)
+        y = float(y)
         xv, yv = self.viewport_transform(x, y)
         self.canvas.create_oval(xv - 2, yv - 2, xv + 2, yv + 2, fill="black")
-        obj = GraphicObject(self.getIndexValorObjeto(), "ponto", [x,y], cor="branco")
+        obj = GraphicObject(self.getIndexValorObjeto(), "ponto", [x,y], cor="black")
         self.display_file.append(obj)
         self.atualizaListBox()
 
-    def addLinha(self):
-        x1 = int(self.linhaX1.get())
-        y1  = int(self.linhaY1.get())
-        x2 = int(self.linhaX2.get())
-        y2  = int(self.linhaY2.get())
+    def addLinha(self,x1,y1,x2,y2):
+        x1 = int(x1)
+        y1  = int(y1)
+        x2 = int(x2)
+        y2  = int(y2)
         coordenadas = [x1,y1,x2,y2]
         xv1, yv1 = self.viewport_transform(x1, y1)
         xv2, yv2 = self.viewport_transform(x2, y2)
         self.canvas.create_line(xv1, yv1, xv2, yv2)
-        obj = GraphicObject(self.getIndexValorObjeto(), "linha", coordenadas,cor="branco")
+        obj = GraphicObject(self.getIndexValorObjeto(), "linha", coordenadas,cor="black")
         self.display_file.append(obj)
         self.atualizaListBox()
 
-    def addWireframe(self):
-        coordenadas = list(eval(self.entryPoligno.get()))
-        obj = GraphicObject(self.getIndexValorObjeto(),"wireframe",coordenadas,cor="branco")
+#((1,1,1,1),(5,5,5,5))
+    def addWireframe(self,coordenadas_wireframe):
+        coordenadas = list(eval(coordenadas_wireframe))
+        obj = GraphicObject(self.getIndexValorObjeto(), "wireframe", coordenadas,cor="black")
         self.display_file.append(obj)
+
         for i in range(len(coordenadas)):
             x1, y1,x2,y2 = coordenadas[i]
             xv1, yv1 = self.viewport_transform(x1, y1)
             xv2, yv2 = self.viewport_transform(x2, y2)
             self.canvas.create_line(xv1, yv1, xv2, yv2)
-        obj = GraphicObject(self.getIndexValorObjeto(), "wireframe", coordenadas,cor="branco")
-        self.display_file.append(obj)
+
         self.atualizaListBox()
 
     def zoom(self, factor):
@@ -252,6 +276,7 @@ class CGApp:
 
     def draw_objects(self):
         self.canvas.delete("all")  # Limpa o canvas
+        self.draw_axes()
         #for item in self.display_file:
         #    print(item.obj_type)
         #    print(item.coordinates)
@@ -267,14 +292,14 @@ class CGApp:
                 x1, y1, x2, y2 = obj.coordinates
                 xv1, yv1 = self.viewport_transform(x1, y1)
                 xv2, yv2 = self.viewport_transform(x2, y2)
-                self.canvas.create_line(xv1, yv1, xv2, yv2)
+                self.canvas.create_line(xv1, yv1, xv2, yv2, fill=obj.cor)
 
             elif obj.obj_type == "wireframe":
                 for i in range(len(obj.coordinates)):
                     x1, y1,x2,y2  = obj.coordinates[i]
                     xv1, yv1 = self.viewport_transform(x1, y1)
                     xv2, yv2 = self.viewport_transform(x2, y2)
-                    self.canvas.create_line(xv1, yv1, xv2, yv2)
+                    self.canvas.create_line(xv1, yv1, xv2, yv2, fill=obj.cor)
 
     def viewport_transform(self, xw, yw):
         vx = (xw - self.window['xmin']) / (self.window['xmax'] - self.window['xmin'])
@@ -291,6 +316,57 @@ class CGApp:
         self.window['ymin'] += dy
         self.window['ymax'] += dy
         self.draw_objects()
+
+    def rotate_window(self, angle, direction):
+        # Converta o ângulo para radianos
+        angulo_rad  = math.radians(float(angle))
+
+        if direction == "R":
+            angulo_rad  = -angulo_rad
+
+        # Pegue o centro da janela atual
+        x_centro = (self.window['xmin'] + self.window['xmax']) / 2
+        y_centro = (self.window['ymin'] + self.window['ymax']) / 2
+
+        # Função de rotação
+        def rotacionar_ponto(x, y):
+            x_rot = (x - x_centro) * math.cos(angulo_rad) - (y - y_centro) * math.sin(angulo_rad) + x_centro
+            y_rot = (x - x_centro) * math.sin(angulo_rad) + (y - y_centro) * math.cos(angulo_rad) + y_centro
+            return x_rot, y_rot
+
+
+        x_min_rot, y_min_rot = rotacionar_ponto(self.window['xmin'], self.window['ymin'])
+        x_max_rot, y_max_rot = rotacionar_ponto(self.window['xmax'], self.window['ymax'])
+
+        # Atualiza os valores da window
+        self.window['xmin'], self.window['ymin'] = x_min_rot, y_min_rot
+        self.window['xmax'], self.window['ymax'] = x_max_rot, y_max_rot
+
+        # Redesenhe os objetos após a rotação
+        self.draw_objects()
+
+    def draw_axes(self):
+        # Função que desenha os eixos X e Y no canvas
+        cx = (self.window['xmin'] + self.window['xmax']) / 2
+        cy = (self.window['ymin'] + self.window['ymax']) / 2
+        x_axis_start = self.viewport_transform(self.window['xmin'], cy)
+        x_axis_end = self.viewport_transform(self.window['xmax'], cy)
+        y_axis_start = self.viewport_transform(cx, self.window['ymin'])
+        y_axis_end = self.viewport_transform(cx, self.window['ymax'])
+
+        # Desenha os eixos no canvas
+        self.canvas.create_line(x_axis_start[0], x_axis_start[1], x_axis_end[0], x_axis_end[1], fill="red")
+        self.canvas.create_line(y_axis_start[0], y_axis_start[1], y_axis_end[0], y_axis_end[1], fill="green")
+
+
+    def parseToWaveFrontObj(self):
+        write_obj("objs.txt",self.display_file)
+
+    def parseFromWaveFrontObj(self):
+        objetos_lidos = read_obj("objs.txt")
+        self.display_file.append(objetos_lidos)
+        self.draw_objects()
+
 
 # Inicializando o Tkinter
 root = tk.Tk()
